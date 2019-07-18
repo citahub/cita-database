@@ -15,6 +15,7 @@ const COL_TRACE: &str = "col4";
 /// TBD. For the empty accounts bloom filter.
 const COL_ACCOUNT_BLOOM: &str = "col5";
 const COL_OTHER: &str = "col6";
+pub const NUM_COLUMNS: Option<u32> = Some(7);
 
 pub fn map_columns(category: DataCategory) -> &'static str {
     match category {
