@@ -1,12 +1,5 @@
-use std::error::Error;
-use std::fmt;
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub enum DatabaseError {
-    NotFound,
-    InvalidData,
-    Internal(String),
-}
+use std::path::Path;
+use crate::error::DatabaseError;
 
 /// Specify the category of data stored, and users can store the data in a
 /// decentralized manner.
@@ -26,18 +19,6 @@ pub enum DataCategory {
     AccountBloom,
     // Keep it for compatibility
     Other,
-}
-
-impl Error for DatabaseError {}
-impl fmt::Display for DatabaseError {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let printable = match *self {
-            DatabaseError::NotFound => "not found".to_owned(),
-            DatabaseError::InvalidData => "invalid data".to_owned(),
-            DatabaseError::Internal(ref err) => format!("internal error: {:?}", err),
-        };
-        write!(f, "{}", printable)
-    }
 }
 
 pub trait Database: Send + Sync {
@@ -68,4 +49,6 @@ pub trait Database: Send + Sync {
     fn remove(&self, category: DataCategory, key: &[u8]) -> Result<(), DatabaseError>;
 
     fn remove_batch(&self, category: DataCategory, keys: &[Vec<u8>]) -> Result<(), DatabaseError>;
+
+    fn restore<P: AsRef<Path>>(&self, new_db: P, old_db: P) -> Result<(), DatabaseError>;
 }
