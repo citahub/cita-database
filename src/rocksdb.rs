@@ -4,11 +4,14 @@ use std::sync::Arc;
 
 use crate::columns::map_columns;
 use crate::config::{Config, BACKGROUND_COMPACTIONS, BACKGROUND_FLUSHES, WRITE_BUFFER_SIZE};
-use crate::database::{DataCategory, Database, DatabaseError};
+use crate::database::{DataCategory, Database};
+use crate::error::DatabaseError;
 use rocksdb::{
-    BlockBasedOptions, ColumnFamily, DBCompactionStyle, Error as RocksError, Options, ReadOptions,
-    WriteBatch, WriteOptions, DB,
+    BlockBasedOptions, ColumnFamily, DBCompactionStyle, Options, ReadOptions, WriteBatch,
+    WriteOptions, DB,
 };
+use std::fs;
+use std::io::ErrorKind;
 
 pub struct RocksDB {
     db: Arc<DB>,
@@ -76,6 +79,47 @@ impl RocksDB {
         })
     }
 
+    /// Restore the database from a copy at given path.
+    /// TODO Add path into RocksDB
+    pub fn restore<P: AsRef<Path>>(&self, new_db: P, old_db: P) -> Result<(), DatabaseError> {
+        // FIXME Close it first
+        // self.close();
+
+        let backup_db = Path::new("backup_db");
+
+        let existed = match fs::rename(&old_db, &backup_db) {
+            Ok(_) => true,
+            Err(e) => {
+                if let ErrorKind::NotFound = e.kind() {
+                    false
+                } else {
+                    return Err(DatabaseError::Internal(e.to_string()));
+                }
+            }
+        };
+
+        match fs::rename(&new_db, &old_db) {
+            Ok(_) => {
+                // Clean up the backup.
+                if existed {
+                    fs::remove_dir_all(&backup_db)?;
+                }
+            }
+            Err(e) => {
+                // Restore the backup.
+                if existed {
+                    fs::rename(&backup_db, &old_db)?;
+                }
+                return Err(DatabaseError::Internal(e.to_string()));
+            }
+        }
+
+        // Reopen the database
+        // FIXME Reset the self.db
+        let _ = Self::open(&old_db, &self.config)?;
+        Ok(())
+    }
+
     #[cfg(test)]
     fn clean(&self) {
         let columns: Vec<_> = (0..self.config.category_num.unwrap_or(0))
@@ -95,7 +139,7 @@ impl Database for RocksDB {
         let key = key.to_vec();
 
         let col = get_column(&db, category)?;
-        let v = db.get_cf(col, &key).map_err(map_db_err)?;
+        let v = db.get_cf(col, &key)?;
         Ok(v.map(|v| v.to_vec()))
     }
 
@@ -111,7 +155,7 @@ impl Database for RocksDB {
         let mut values = Vec::with_capacity(keys.len());
 
         for key in keys {
-            let v = db.get_cf(col, key).map_err(map_db_err)?;
+            let v = db.get_cf(col, key)?;
             values.push(v.map(|v| v.to_vec()));
         }
         Ok(values)
@@ -126,7 +170,7 @@ impl Database for RocksDB {
         let db = Arc::clone(&self.db);
 
         let col = get_column(&db, category)?;
-        db.put_cf(col, key, value).map_err(map_db_err)?;
+        db.put_cf(col, key, value)?;
         Ok(())
     }
 
@@ -146,11 +190,9 @@ impl Database for RocksDB {
         let mut batch = WriteBatch::default();
 
         for i in 0..keys.len() {
-            batch
-                .put_cf(col, &keys[i], &values[i])
-                .map_err(map_db_err)?;
+            batch.put_cf(col, &keys[i], &values[i])?;
         }
-        db.write(batch).map_err(map_db_err)?;
+        db.write(batch)?;
         Ok(())
     }
 
@@ -159,7 +201,7 @@ impl Database for RocksDB {
         let key = key.to_vec();
 
         let col = get_column(&db, category)?;
-        let v = db.get_cf(col, &key).map_err(map_db_err)?;
+        let v = db.get_cf(col, &key)?;
         Ok(v.is_some())
     }
 
@@ -168,7 +210,7 @@ impl Database for RocksDB {
         let key = key.to_vec();
 
         let col = get_column(&db, category)?;
-        db.delete_cf(col, key).map_err(map_db_err)?;
+        db.delete_cf(col, key)?;
         Ok(())
     }
 
@@ -180,15 +222,15 @@ impl Database for RocksDB {
 
         let mut batch = WriteBatch::default();
         for key in keys {
-            batch.delete_cf(col, key).map_err(map_db_err)?;
+            batch.delete_cf(col, key)?;
         }
-        db.write(batch).map_err(map_db_err)?;
+        db.write(batch)?;
         Ok(())
     }
-}
 
-fn map_db_err(err: RocksError) -> DatabaseError {
-    DatabaseError::Internal(err.to_string())
+    fn restore<P: AsRef<Path>>(&self, new_db: P, old_db: P) -> Result<(), DatabaseError> {
+        RocksDB::restore(self, new_db, old_db)
+    }
 }
 
 fn get_column(db: &DB, category: DataCategory) -> Result<ColumnFamily, DatabaseError> {
