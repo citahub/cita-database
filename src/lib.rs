@@ -1,8 +1,8 @@
 pub mod columns;
 pub mod config;
 pub mod database;
-pub mod rocksdb;
 pub mod error;
+pub mod rocksdb;
 
 #[cfg(test)]
 pub(crate) mod test;
