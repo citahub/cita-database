@@ -1,5 +1,5 @@
-use std::path::Path;
 use crate::error::DatabaseError;
+use std::path::Path;
 
 /// Specify the category of data stored, and users can store the data in a
 /// decentralized manner.
@@ -22,33 +22,41 @@ pub enum DataCategory {
 }
 
 pub trait Database: Send + Sync {
-    fn get(&self, category: DataCategory, key: &[u8]) -> Result<Option<Vec<u8>>, DatabaseError>;
+    fn get(
+        &self,
+        category: Option<DataCategory>,
+        key: &[u8],
+    ) -> Result<Option<Vec<u8>>, DatabaseError>;
 
     fn get_batch(
         &self,
-        category: DataCategory,
+        category: Option<DataCategory>,
         keys: &[Vec<u8>],
     ) -> Result<Vec<Option<Vec<u8>>>, DatabaseError>;
 
     fn insert(
         &self,
-        category: DataCategory,
+        category: Option<DataCategory>,
         key: Vec<u8>,
         value: Vec<u8>,
     ) -> Result<(), DatabaseError>;
 
     fn insert_batch(
         &self,
-        category: DataCategory,
+        category: Option<DataCategory>,
         keys: Vec<Vec<u8>>,
         values: Vec<Vec<u8>>,
     ) -> Result<(), DatabaseError>;
 
-    fn contains(&self, category: DataCategory, key: &[u8]) -> Result<bool, DatabaseError>;
+    fn contains(&self, category: Option<DataCategory>, key: &[u8]) -> Result<bool, DatabaseError>;
 
-    fn remove(&self, category: DataCategory, key: &[u8]) -> Result<(), DatabaseError>;
+    fn remove(&self, category: Option<DataCategory>, key: &[u8]) -> Result<(), DatabaseError>;
 
-    fn remove_batch(&self, category: DataCategory, keys: &[Vec<u8>]) -> Result<(), DatabaseError>;
+    fn remove_batch(
+        &self,
+        category: Option<DataCategory>,
+        keys: &[Vec<u8>],
+    ) -> Result<(), DatabaseError>;
 
     fn restore<P: AsRef<Path>>(&self, new_db: P, old_db: P) -> Result<(), DatabaseError>;
 }
