@@ -1,4 +1,5 @@
 use crate::error::DatabaseError;
+use rocksdb::DBIterator;
 use std::path::Path;
 
 /// Specify the category of data stored, and users can store the data in a
@@ -59,4 +60,6 @@ pub trait Database: Send + Sync {
     ) -> Result<(), DatabaseError>;
 
     fn restore<P: AsRef<Path>>(&self, new_db: P, old_db: P) -> Result<(), DatabaseError>;
+
+    fn iterator(&self, category: Option<DataCategory>) -> Result<DBIterator, DatabaseError>;
 }
