@@ -7,8 +7,8 @@ use crate::config::{Config, BACKGROUND_COMPACTIONS, BACKGROUND_FLUSHES, WRITE_BU
 use crate::database::{DataCategory, Database};
 use crate::error::DatabaseError;
 use rocksdb::{
-    BlockBasedOptions, ColumnFamily, DBCompactionStyle, Options, ReadOptions, WriteBatch,
-    WriteOptions, DB,
+    BlockBasedOptions, ColumnFamily, DBCompactionStyle, DBIterator, Options, ReadOptions,
+    WriteBatch, WriteOptions, DB,
 };
 use std::fs;
 use std::io::ErrorKind;
@@ -118,6 +118,11 @@ impl RocksDB {
         // FIXME Reset the self.db
         let _ = Self::open(&old_db, &self.config)?;
         Ok(())
+    }
+
+    // TODO Implement it.
+    pub fn iterator(&self, _category: Option<DataCategory>) -> Result<DBIterator, DatabaseError> {
+        unimplemented!();
     }
 
     #[cfg(test)]
@@ -274,6 +279,10 @@ impl Database for RocksDB {
 
     fn restore<P: AsRef<Path>>(&self, new_db: P, old_db: P) -> Result<(), DatabaseError> {
         RocksDB::restore(self, new_db, old_db)
+    }
+
+    fn iterator(&self, category: Option<DataCategory>) -> Result<DBIterator, DatabaseError> {
+        RocksDB::iterator(self, category)
     }
 }
 
