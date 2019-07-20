@@ -10,6 +10,6 @@ license = "Apache-2.0"
 
 [dependencies]
 cita-logger = "0.1.0"
-parity-rocksdb = "0.5.1"
+parity-rocksdb = "0.5"
 
 [dev-dependencies]
