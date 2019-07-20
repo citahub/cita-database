@@ -1,4 +1,3 @@
-use rocksdb::Error as RocksError;
 use std::error::Error;
 use std::fmt;
 use std::io::Error as IOError;
@@ -12,12 +11,6 @@ pub enum DatabaseError {
 
 impl From<IOError> for DatabaseError {
     fn from(err: IOError) -> Self {
-        DatabaseError::Internal(err.to_string())
-    }
-}
-
-impl From<RocksError> for DatabaseError {
-    fn from(err: RocksError) -> Self {
         DatabaseError::Internal(err.to_string())
     }
 }

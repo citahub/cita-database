@@ -1,5 +1,5 @@
 use crate::error::DatabaseError;
-use rocksdb::DBIterator;
+use parity_rocksdb::DBIterator;
 use std::path::Path;
 
 /// Specify the category of data stored, and users can store the data in a

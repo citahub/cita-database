@@ -1,17 +1,15 @@
+#![allow(dead_code)]
 use std::default::Default;
 use std::path::Path;
 use std::sync::Arc;
 
-use crate::columns::map_columns;
-use crate::config::{Config, BACKGROUND_COMPACTIONS, BACKGROUND_FLUSHES, WRITE_BUFFER_SIZE};
+use crate::config::Config;
 use crate::database::{DataCategory, Database};
 use crate::error::DatabaseError;
-use rocksdb::{
-    BlockBasedOptions, ColumnFamily, DBCompactionStyle, DBIterator, Options, ReadOptions,
-    WriteBatch, WriteOptions, DB,
+use parity_rocksdb::{
+    DBIterator, ReadOptions,
+    WriteOptions, DB,
 };
-use std::fs;
-use std::io::ErrorKind;
 
 pub struct RocksDB {
     db: Arc<DB>,
@@ -31,250 +29,71 @@ impl RocksDB {
     }
 
     /// Open rocksDB with config.
-    pub fn open<P: AsRef<Path>>(path: P, config: &Config) -> Result<Self, DatabaseError> {
-        let mut opts = Options::default();
-        opts.set_write_buffer_size(WRITE_BUFFER_SIZE);
-        opts.set_max_background_flushes(BACKGROUND_FLUSHES);
-        opts.set_max_background_compactions(BACKGROUND_COMPACTIONS);
-        opts.create_if_missing(true);
-        // If true, any column families that didn't exist when opening the database will be created.
-        opts.create_missing_column_families(true);
-
-        let block_opts = BlockBasedOptions::default();
-        opts.set_block_based_table_factory(&block_opts);
-
-        opts.set_max_open_files(config.max_open_files);
-        opts.set_use_fsync(false);
-        opts.set_compaction_style(DBCompactionStyle::Level);
-        opts.set_target_file_size_base(config.compaction.target_file_size_base);
-        if let Some(level_multiplier) = config.compaction.max_bytes_for_level_multiplier {
-            opts.set_max_bytes_for_level_multiplier(level_multiplier);
-        }
-        if let Some(compactions) = config.compaction.max_background_compactions {
-            opts.set_max_background_compactions(compactions);
-        }
-
-        let mut write_opts = WriteOptions::default();
-        if !config.wal {
-            write_opts.disable_wal(true);
-        }
-
-        let columns: Vec<_> = (0..config.category_num.unwrap_or(0))
-            .map(|c| format!("col{}", c))
-            .collect();
-        let columns: Vec<&str> = columns.iter().map(|n| n as &str).collect();
-        debug!("[database] Columns: {:?}", columns);
-
-        let db = match config.category_num {
-            Some(_) => DB::open_cf(&opts, path, columns.iter())
-                .map_err(|e| DatabaseError::Internal(e.to_string()))?,
-            None => DB::open(&opts, path).map_err(|e| DatabaseError::Internal(e.to_string()))?,
-        };
-
-        Ok(RocksDB {
-            db: Arc::new(db),
-            write_opts,
-            read_opts: ReadOptions::default(),
-            config: config.clone(),
-        })
+    pub fn open<P: AsRef<Path>>(_path: P, _config: &Config) -> Result<Self, DatabaseError> {
+        unimplemented!()
     }
 
     /// Restore the database from a copy at given path.
     /// TODO Add path into RocksDB
-    pub fn restore<P: AsRef<Path>>(&self, new_db: P, old_db: P) -> Result<(), DatabaseError> {
-        // FIXME Close it first
-        // self.close();
-
-        let backup_db = Path::new("backup_db");
-
-        let existed = match fs::rename(&old_db, &backup_db) {
-            Ok(_) => true,
-            Err(e) => {
-                if let ErrorKind::NotFound = e.kind() {
-                    false
-                } else {
-                    return Err(DatabaseError::Internal(e.to_string()));
-                }
-            }
-        };
-
-        match fs::rename(&new_db, &old_db) {
-            Ok(_) => {
-                // Clean up the backup.
-                if existed {
-                    fs::remove_dir_all(&backup_db)?;
-                }
-            }
-            Err(e) => {
-                // Restore the backup.
-                if existed {
-                    fs::rename(&backup_db, &old_db)?;
-                }
-                return Err(DatabaseError::Internal(e.to_string()));
-            }
-        }
-
-        // Reopen the database
-        // FIXME Reset the self.db
-        let _ = Self::open(&old_db, &self.config)?;
-        Ok(())
+    pub fn restore<P: AsRef<Path>>(&self, _new_db: P, _old_db: P) -> Result<(), DatabaseError> {
+        unimplemented!()
     }
 
     // TODO Implement it.
     pub fn iterator(&self, _category: Option<DataCategory>) -> Result<DBIterator, DatabaseError> {
         unimplemented!();
     }
-
-    #[cfg(test)]
-    fn clean(&self) {
-        let columns: Vec<_> = (0..self.config.category_num.unwrap_or(0))
-            .map(|c| format!("col{}", c))
-            .collect();
-        let columns: Vec<&str> = columns.iter().map(|n| n as &str).collect();
-
-        for col in columns.iter() {
-            self.db.drop_cf(col).unwrap();
-        }
-    }
 }
 
 impl Database for RocksDB {
     fn get(
         &self,
-        category: Option<DataCategory>,
-        key: &[u8],
+        _category: Option<DataCategory>,
+        _key: &[u8],
     ) -> Result<Option<Vec<u8>>, DatabaseError> {
-        let db = Arc::clone(&self.db);
-        let key = key.to_vec();
-
-        let mut value = db.get(&key)?;
-        if let Some(category) = category {
-            let col = get_column(&db, category)?;
-            value = db.get_cf(col, &key)?;
-        }
-
-        Ok(value.map(|v| v.to_vec()))
+        unimplemented!();
     }
 
     fn get_batch(
         &self,
-        category: Option<DataCategory>,
-        keys: &[Vec<u8>],
+        _category: Option<DataCategory>,
+        _keys: &[Vec<u8>],
     ) -> Result<Vec<Option<Vec<u8>>>, DatabaseError> {
-        let db = Arc::clone(&self.db);
-        let keys = keys.to_vec();
-
-        let mut values = Vec::with_capacity(keys.len());
-
-        for key in keys {
-            let mut value = db.get(&key)?;
-            if let Some(category) = category.clone() {
-                let col = get_column(&db, category)?;
-                value = db.get_cf(col, &key)?;
-            }
-            values.push(value.map(|v| v.to_vec()));
-        }
-
-        Ok(values)
+        unimplemented!();
     }
 
     fn insert(
         &self,
-        category: Option<DataCategory>,
-        key: Vec<u8>,
-        value: Vec<u8>,
+        _category: Option<DataCategory>,
+        _key: Vec<u8>,
+        _value: Vec<u8>,
     ) -> Result<(), DatabaseError> {
-        let db = Arc::clone(&self.db);
-
-        match category {
-            Some(category) => {
-                let col = get_column(&db, category)?;
-                db.put_cf(col, key, value)?;
-            }
-            None => db.put(key, value)?,
-        }
-
-        Ok(())
+        unimplemented!();
     }
 
     fn insert_batch(
         &self,
-        category: Option<DataCategory>,
-        keys: Vec<Vec<u8>>,
-        values: Vec<Vec<u8>>,
+        _category: Option<DataCategory>,
+        _keys: Vec<Vec<u8>>,
+        _values: Vec<Vec<u8>>,
     ) -> Result<(), DatabaseError> {
-        let db = Arc::clone(&self.db);
-
-        if keys.len() != values.len() {
-            return Err(DatabaseError::InvalidData);
-        }
-
-        let mut batch = WriteBatch::default();
-
-        for i in 0..keys.len() {
-            match category.clone() {
-                Some(category) => {
-                    let col = get_column(&db, category)?;
-                    batch.put_cf(col, &keys[i], &values[i])?;
-                }
-                None => batch.put(&keys[i], &values[i])?,
-            }
-        }
-        db.write(batch)?;
-
-        Ok(())
+        unimplemented!();
     }
 
-    fn contains(&self, category: Option<DataCategory>, key: &[u8]) -> Result<bool, DatabaseError> {
-        let db = Arc::clone(&self.db);
-        let key = key.to_vec();
-
-        let mut value = db.get(&key)?;
-        if let Some(category) = category {
-            let col = get_column(&db, category)?;
-            value = db.get_cf(col, &key)?;
-        }
-
-        Ok(value.is_some())
+    fn contains(&self, _category: Option<DataCategory>, _key: &[u8]) -> Result<bool, DatabaseError> {
+        unimplemented!();
     }
 
-    fn remove(&self, category: Option<DataCategory>, key: &[u8]) -> Result<(), DatabaseError> {
-        let db = Arc::clone(&self.db);
-        let key = key.to_vec();
-
-        match category {
-            Some(category) => {
-                let col = get_column(&db, category)?;
-                db.delete_cf(col, key)?;
-            }
-            None => db.delete(key)?,
-        }
-
-        Ok(())
+    fn remove(&self, _category: Option<DataCategory>, _key: &[u8]) -> Result<(), DatabaseError> {
+        unimplemented!();
     }
 
     fn remove_batch(
         &self,
-        category: Option<DataCategory>,
-        keys: &[Vec<u8>],
+        _category: Option<DataCategory>,
+        _keys: &[Vec<u8>],
     ) -> Result<(), DatabaseError> {
-        let db = Arc::clone(&self.db);
-        let keys = keys.to_vec();
-
-        let mut batch = WriteBatch::default();
-
-        for key in keys {
-            match category.clone() {
-                Some(category) => {
-                    let col = get_column(&db, category)?;
-                    batch.delete_cf(col, key)?;
-                }
-                None => db.delete(key)?,
-            }
-        }
-        db.write(batch)?;
-
-        Ok(())
+        unimplemented!();
     }
 
     fn restore<P: AsRef<Path>>(&self, new_db: P, old_db: P) -> Result<(), DatabaseError> {
@@ -283,89 +102,5 @@ impl Database for RocksDB {
 
     fn iterator(&self, category: Option<DataCategory>) -> Result<DBIterator, DatabaseError> {
         RocksDB::iterator(self, category)
-    }
-}
-
-fn get_column(db: &DB, category: DataCategory) -> Result<ColumnFamily, DatabaseError> {
-    db.cf_handle(map_columns(category))
-        .ok_or(DatabaseError::NotFound)
-}
-
-#[cfg(test)]
-mod tests {
-    use super::{Config, RocksDB};
-    use crate::database::{DataCategory, Database};
-    use crate::error::DatabaseError;
-    use crate::test::{batch_op, insert_get_contains_remove};
-
-    #[test]
-    fn test_insert_get_contains_remove_with_category() {
-        let cfg = Config::with_category_num(Some(1));
-        let db = RocksDB::open(
-            "rocksdb/test_get_insert_contains_remove_with_category",
-            &cfg,
-        )
-        .unwrap();
-
-        insert_get_contains_remove(&db, Some(DataCategory::State));
-
-        db.clean();
-    }
-
-    #[test]
-    fn test_insert_get_contains_remove() {
-        let db = RocksDB::open_default("rocksdb/test_get_insert_contains_remove").unwrap();
-
-        insert_get_contains_remove(&db, None);
-
-        db.clean();
-    }
-
-    #[test]
-    fn test_batch_op_with_category() {
-        let cfg = Config::with_category_num(Some(1));
-        let db = RocksDB::open("rocksdb/test_batch_op_with_category", &cfg).unwrap();
-
-        batch_op(&db, Some(DataCategory::State));
-
-        db.clean();
-    }
-
-    #[test]
-    fn test_batch_op() {
-        let db = RocksDB::open_default("rocksdb/test_batch_op").unwrap();
-
-        batch_op(&db, None);
-
-        db.clean();
-    }
-
-    #[test]
-    fn test_insert_batch_error_with_category() {
-        let cfg = Config::with_category_num(Some(1));
-        let db = RocksDB::open("rocksdb/test_insert_batch_error_with_category", &cfg).unwrap();
-
-        let data = b"test".to_vec();
-
-        match db.insert_batch(Some(DataCategory::State), vec![data], vec![]) {
-            Err(DatabaseError::InvalidData) => (), // pass
-            _ => panic!("should return error DatabaseError::InvalidData"),
-        }
-
-        db.clean();
-    }
-
-    #[test]
-    fn test_insert_batch_error() {
-        let db = RocksDB::open_default("rocksdb/test_insert_batch_error").unwrap();
-
-        let data = b"test".to_vec();
-
-        match db.insert_batch(None, vec![data], vec![]) {
-            Err(DatabaseError::InvalidData) => (), // pass
-            _ => panic!("should return error DatabaseError::InvalidData"),
-        }
-
-        db.clean();
     }
 }
