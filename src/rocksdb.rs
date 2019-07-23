@@ -82,13 +82,13 @@ impl RocksDB {
     }
 
     /// Restore the database from a copy at given path.
-    pub fn restore(&self, new_db: &str, old_db: &str) -> Result<(), DatabaseError> {
+    pub fn restore(&self, new_db: &str) -> Result<(), DatabaseError> {
         // FIXME Close it first
         // self.close();
 
         let backup_db = Path::new("backup_db");
 
-        let existed = match fs::rename(&old_db, &backup_db) {
+        let existed = match fs::rename(&self.path, &backup_db) {
             Ok(_) => true,
             Err(e) => {
                 if let ErrorKind::NotFound = e.kind() {
@@ -99,7 +99,7 @@ impl RocksDB {
             }
         };
 
-        match fs::rename(&new_db, &old_db) {
+        match fs::rename(&new_db, &self.path) {
             Ok(_) => {
                 // Clean up the backup.
                 if existed {
@@ -109,7 +109,7 @@ impl RocksDB {
             Err(e) => {
                 // Restore the backup.
                 if existed {
-                    fs::rename(&backup_db, &old_db)?;
+                    fs::rename(&backup_db, &self.path)?;
                 }
                 return Err(DatabaseError::Internal(e.to_string()));
             }
@@ -117,7 +117,7 @@ impl RocksDB {
 
         // Reopen the database
         // FIXME Reset the self.db
-        let _ = Self::open(&old_db, &self.config)?;
+        let _ = Self::open(&self.path, &self.config)?;
         Ok(())
     }
 
@@ -289,8 +289,8 @@ impl Database for RocksDB {
         Ok(())
     }
 
-    fn restore(&self, new_db: &str, old_db: &str) -> Result<(), DatabaseError> {
-        RocksDB::restore(self, new_db, old_db)
+    fn restore(&self, new_db: &str) -> Result<(), DatabaseError> {
+        RocksDB::restore(self, new_db)
     }
 
     fn iterator(&self, category: Option<DataCategory>) -> Result<DBIterator, DatabaseError> {
