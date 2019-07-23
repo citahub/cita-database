@@ -18,6 +18,7 @@ pub struct RocksDB {
     pub config: Config,
     pub write_opts: WriteOptions,
     pub read_opts: ReadOptions,
+    path: String,
 }
 
 // RocksDB guarantees synchronization
@@ -76,11 +77,11 @@ impl RocksDB {
             write_opts,
             read_opts: ReadOptions::default(),
             config: config.clone(),
+            path: path.to_owned(),
         })
     }
 
     /// Restore the database from a copy at given path.
-    /// TODO Add path into RocksDB
     pub fn restore(&self, new_db: &str, old_db: &str) -> Result<(), DatabaseError> {
         // FIXME Close it first
         // self.close();
