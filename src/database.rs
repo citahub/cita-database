@@ -1,6 +1,5 @@
 use crate::error::DatabaseError;
 use parity_rocksdb::DBIterator;
-use std::path::Path;
 
 /// Specify the category of data stored, and users can store the data in a
 /// decentralized manner.
@@ -59,7 +58,7 @@ pub trait Database: Send + Sync {
         keys: &[Vec<u8>],
     ) -> Result<(), DatabaseError>;
 
-    fn restore<P: AsRef<Path>>(&self, new_db: P, old_db: P) -> Result<(), DatabaseError>;
+    fn restore(&self, new_db: &str) -> Result<(), DatabaseError>;
 
     fn iterator(&self, category: Option<DataCategory>) -> Result<DBIterator, DatabaseError>;
 }

@@ -6,10 +6,7 @@ use std::sync::Arc;
 use crate::config::Config;
 use crate::database::{DataCategory, Database};
 use crate::error::DatabaseError;
-use parity_rocksdb::{
-    DBIterator, ReadOptions,
-    WriteOptions, DB,
-};
+use parity_rocksdb::{DBIterator, ReadOptions, WriteOptions, DB};
 
 pub struct RocksDB {
     db: Arc<DB>,
@@ -34,8 +31,7 @@ impl RocksDB {
     }
 
     /// Restore the database from a copy at given path.
-    /// TODO Add path into RocksDB
-    pub fn restore<P: AsRef<Path>>(&self, _new_db: P, _old_db: P) -> Result<(), DatabaseError> {
+    pub fn restore(&self, _new_db: &str) -> Result<(), DatabaseError> {
         unimplemented!()
     }
 
@@ -80,7 +76,11 @@ impl Database for RocksDB {
         unimplemented!();
     }
 
-    fn contains(&self, _category: Option<DataCategory>, _key: &[u8]) -> Result<bool, DatabaseError> {
+    fn contains(
+        &self,
+        _category: Option<DataCategory>,
+        _key: &[u8],
+    ) -> Result<bool, DatabaseError> {
         unimplemented!();
     }
 
@@ -96,8 +96,8 @@ impl Database for RocksDB {
         unimplemented!();
     }
 
-    fn restore<P: AsRef<Path>>(&self, new_db: P, old_db: P) -> Result<(), DatabaseError> {
-        RocksDB::restore(self, new_db, old_db)
+    fn restore(&self, new_db: &str) -> Result<(), DatabaseError> {
+        RocksDB::restore(self, new_db)
     }
 
     fn iterator(&self, category: Option<DataCategory>) -> Result<DBIterator, DatabaseError> {
