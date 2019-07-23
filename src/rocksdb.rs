@@ -7,8 +7,8 @@ use crate::config::{Config, BACKGROUND_COMPACTIONS, BACKGROUND_FLUSHES, WRITE_BU
 use crate::database::{DataCategory, Database};
 use crate::error::DatabaseError;
 use rocksdb::{
-    BlockBasedOptions, ColumnFamily, DBCompactionStyle, DBIterator, Options, ReadOptions,
-    WriteBatch, WriteOptions, DB,
+    BlockBasedOptions, ColumnFamily, DBCompactionStyle, DBIterator, IteratorMode, Options,
+    ReadOptions, WriteBatch, WriteOptions, DB,
 };
 use std::fs;
 use std::io::ErrorKind;
@@ -120,9 +120,20 @@ impl RocksDB {
         Ok(())
     }
 
-    // TODO Implement it.
-    pub fn iterator(&self, _category: Option<DataCategory>) -> Result<DBIterator, DatabaseError> {
-        unimplemented!();
+    pub fn iterator(&self, category: Option<DataCategory>) -> Result<DBIterator, DatabaseError> {
+        let iter = category.map_or_else(
+            || self.db.iterator_opt(IteratorMode::Start, &self.read_opts),
+            |col| {
+                self.db
+                    .iterator_cf_opt(
+                        get_column(&self.db, col).unwrap(),
+                        &self.read_opts,
+                        IteratorMode::Start,
+                    )
+                    .expect("iterator params are valid;")
+            },
+        );
+        Ok(iter)
     }
 
     #[cfg(test)]
@@ -367,5 +378,59 @@ mod tests {
         }
 
         db.clean();
+    }
+
+    #[test]
+    fn test_iterator_with_category() {
+        let cfg = Config::with_category_num(Some(1));
+        let db = RocksDB::open("rocksdb/test_iterator_with_category", &cfg).unwrap();
+
+        let data1 = b"test1".to_vec();
+        let data2 = b"test2".to_vec();
+
+        db.insert_batch(
+            Some(DataCategory::State),
+            vec![data1.clone(), data2.clone()],
+            vec![data1.clone(), data2.clone()],
+        )
+        .expect("Insert data ok.");
+
+        let contents: Vec<_> = db
+            .iterator(Some(DataCategory::State))
+            .into_iter()
+            .flat_map(|inner| inner)
+            .collect();
+        println!("contents: {:?}", contents);
+        assert_eq!(contents.len(), 2);
+        assert_eq!(&*contents[0].0, &*data1);
+        assert_eq!(&*contents[0].1, &*data1);
+        assert_eq!(&*contents[1].0, &*data2);
+        assert_eq!(&*contents[1].1, &*data2);
+    }
+
+    #[test]
+    fn test_iterator() {
+        let db = RocksDB::open_default("rocksdb/test_iterator").unwrap();
+
+        let data1 = b"test1".to_vec();
+        let data2 = b"test2".to_vec();
+
+        db.insert_batch(
+            None,
+            vec![data1.clone(), data2.clone()],
+            vec![data1.clone(), data2.clone()],
+        )
+        .expect("Insert data ok.");
+
+        let contents: Vec<_> = db
+            .iterator(None)
+            .into_iter()
+            .flat_map(|inner| inner)
+            .collect();
+        assert_eq!(contents.len(), 2);
+        assert_eq!(&*contents[0].0, &*data1);
+        assert_eq!(&*contents[0].1, &*data1);
+        assert_eq!(&*contents[1].0, &*data2);
+        assert_eq!(&*contents[1].1, &*data2);
     }
 }
