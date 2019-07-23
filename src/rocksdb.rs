@@ -26,12 +26,12 @@ unsafe impl Send for RocksDB {}
 
 impl RocksDB {
     /// Open a rocksDB with default config.
-    pub fn open_default<P: AsRef<Path>>(path: P) -> Result<Self, DatabaseError> {
+    pub fn open_default(path: &str) -> Result<Self, DatabaseError> {
         Self::open(path, &Config::default())
     }
 
     /// Open rocksDB with config.
-    pub fn open<P: AsRef<Path>>(path: P, config: &Config) -> Result<Self, DatabaseError> {
+    pub fn open(path: &str, config: &Config) -> Result<Self, DatabaseError> {
         let mut opts = Options::default();
         opts.set_write_buffer_size(WRITE_BUFFER_SIZE);
         opts.set_max_background_flushes(BACKGROUND_FLUSHES);
@@ -81,7 +81,7 @@ impl RocksDB {
 
     /// Restore the database from a copy at given path.
     /// TODO Add path into RocksDB
-    pub fn restore<P: AsRef<Path>>(&self, new_db: P, old_db: P) -> Result<(), DatabaseError> {
+    pub fn restore(&self, new_db: &str, old_db: &str) -> Result<(), DatabaseError> {
         // FIXME Close it first
         // self.close();
 
@@ -288,7 +288,7 @@ impl Database for RocksDB {
         Ok(())
     }
 
-    fn restore<P: AsRef<Path>>(&self, new_db: P, old_db: P) -> Result<(), DatabaseError> {
+    fn restore(&self, new_db: &str, old_db: &str) -> Result<(), DatabaseError> {
         RocksDB::restore(self, new_db, old_db)
     }
 
