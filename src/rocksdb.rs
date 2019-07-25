@@ -82,9 +82,10 @@ impl RocksDB {
     }
 
     /// Restore the database from a copy at given path.
-    pub fn restore(&self, new_db: &str) -> Result<(), DatabaseError> {
-        // FIXME Close it first
-        // self.close();
+    pub fn restore(&mut self, new_db: &str) -> Result<(), DatabaseError> {
+        // Close it first
+        // https://github.com/facebook/rocksdb/wiki/Basic-Operations#closing-a-database
+        // TODO Use Option<db> and set it to None.
 
         let backup_db = Path::new("backup_db");
 
@@ -116,8 +117,8 @@ impl RocksDB {
         }
 
         // Reopen the database
-        // FIXME Reset the self.db
-        let _ = Self::open(&self.path, &self.config)?;
+        let new_db = Self::open(&self.path, &self.config).unwrap().db;
+        *Arc::get_mut(&mut self.db).unwrap() = Arc::try_unwrap(new_db).unwrap();
         Ok(())
     }
 
@@ -289,7 +290,7 @@ impl Database for RocksDB {
         Ok(())
     }
 
-    fn restore(&self, new_db: &str) -> Result<(), DatabaseError> {
+    fn restore(&mut self, new_db: &str) -> Result<(), DatabaseError> {
         RocksDB::restore(self, new_db)
     }
 

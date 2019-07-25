@@ -58,7 +58,7 @@ pub trait Database: Send + Sync {
         keys: &[Vec<u8>],
     ) -> Result<(), DatabaseError>;
 
-    fn restore(&self, new_db: &str) -> Result<(), DatabaseError>;
+    fn restore(&mut self, new_db: &str) -> Result<(), DatabaseError>;
 
     fn iterator(&self, category: Option<DataCategory>) -> Result<DBIterator, DatabaseError>;
 }
