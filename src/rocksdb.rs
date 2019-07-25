@@ -31,7 +31,7 @@ impl RocksDB {
     }
 
     /// Restore the database from a copy at given path.
-    pub fn restore(&self, _new_db: &str) -> Result<(), DatabaseError> {
+    pub fn restore(&mut self, _new_db: &str) -> Result<(), DatabaseError> {
         unimplemented!()
     }
 
@@ -96,7 +96,7 @@ impl Database for RocksDB {
         unimplemented!();
     }
 
-    fn restore(&self, new_db: &str) -> Result<(), DatabaseError> {
+    fn restore(&mut self, new_db: &str) -> Result<(), DatabaseError> {
         RocksDB::restore(self, new_db)
     }
 
