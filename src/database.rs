@@ -50,6 +50,7 @@ pub trait Database: Send + Sync {
 
     fn restore(&mut self, new_db: &str) -> Result<()>;
 
+    // TODO Replace the DBIterator
     fn iterator(&self, category: Option<DataCategory>) -> Option<DBIterator>;
 
     fn close(&mut self);
