@@ -155,7 +155,7 @@ impl RocksDB {
     }
 
     #[cfg(test)]
-    fn clean(&self) {
+    fn clean_cf(&self) {
         let columns: Vec<_> = (0..self.config.category_num.unwrap_or(0))
             .map(|c| format!("col{}", c))
             .collect();
@@ -347,7 +347,7 @@ mod tests {
 
         insert_get_contains_remove(&db, Some(DataCategory::State));
 
-        db.clean();
+        db.clean_cf();
     }
 
     #[test]
@@ -355,8 +355,6 @@ mod tests {
         let db = RocksDB::open_default("rocksdb/test_get_insert_contains_remove").unwrap();
 
         insert_get_contains_remove(&db, None);
-
-        db.clean();
     }
 
     #[test]
@@ -366,7 +364,7 @@ mod tests {
 
         batch_op(&db, Some(DataCategory::State));
 
-        db.clean();
+        db.clean_cf();
     }
 
     #[test]
@@ -374,8 +372,6 @@ mod tests {
         let db = RocksDB::open_default("rocksdb/test_batch_op").unwrap();
 
         batch_op(&db, None);
-
-        db.clean();
     }
 
     #[test]
@@ -390,7 +386,7 @@ mod tests {
             _ => panic!("should return error DatabaseError::InvalidData"),
         }
 
-        db.clean();
+        db.clean_cf();
     }
 
     #[test]
@@ -403,8 +399,6 @@ mod tests {
             Err(DatabaseError::InvalidData) => (), // pass
             _ => panic!("should return error DatabaseError::InvalidData"),
         }
-
-        db.clean();
     }
 
     #[test]
@@ -433,6 +427,8 @@ mod tests {
         assert_eq!(&*contents[0].1, &*data1);
         assert_eq!(&*contents[1].0, &*data2);
         assert_eq!(&*contents[1].1, &*data2);
+
+        db.clean_cf();
     }
 
     #[test]
@@ -460,4 +456,50 @@ mod tests {
         assert_eq!(&*contents[1].0, &*data2);
         assert_eq!(&*contents[1].1, &*data2);
     }
+
+    #[test]
+    fn test_close_with_category() {
+        let cfg = Config::with_category_num(Some(1));
+        let mut db = RocksDB::open("rocksdb/test_close_with_category", &cfg).unwrap();
+        let data = b"test".to_vec();
+        db.insert(Some(DataCategory::State), data.clone(), data.clone())
+            .unwrap();
+        assert_eq!(db.contains(Some(DataCategory::State), &data), Ok(true));
+        // Can not open it again
+        match RocksDB::open_default("rocksdb/test_close_with_category") {
+            // "IO error: lock : rocksdb/test_close/LOCK: No locks available"
+            Err(DatabaseError::Internal(_)) => (), // pass
+            _ => panic!("should return error DatabaseError::Intrnal"),
+        }
+        db.close();
+        // Can not query
+        assert_eq!(db.contains(Some(DataCategory::State), &data), Ok(false));
+
+        // Can open it again and query
+        let cfg = Config::with_category_num(Some(1));
+        let db = RocksDB::open("rocksdb/test_close_with_category", &cfg).unwrap();
+        assert_eq!(db.contains(Some(DataCategory::State), &data), Ok(true));
+    }
+
+    #[test]
+    fn test_close() {
+        let mut db = RocksDB::open_default("rocksdb/test_close").unwrap();
+        let data = b"test".to_vec();
+        db.insert(None, data.clone(), data.clone()).unwrap();
+        assert_eq!(db.contains(None, &data), Ok(true));
+        // Can not open it again
+        match RocksDB::open_default("rocksdb/test_close") {
+            // "IO error: lock : rocksdb/test_close/LOCK: No locks available"
+            Err(DatabaseError::Internal(_)) => (), // pass
+            _ => panic!("should return error DatabaseError::Intrnal"),
+        }
+        db.close();
+        // Can not query
+        assert_eq!(db.contains(None, &data), Ok(false));
+
+        // Can open it again and query
+        let db = RocksDB::open_default("rocksdb/test_close").unwrap();
+        assert_eq!(db.contains(None, &data), Ok(true));
+    }
+
 }
