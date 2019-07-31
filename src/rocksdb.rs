@@ -322,6 +322,10 @@ impl Database for RocksDB {
     fn iterator(&self, category: Option<DataCategory>) -> Option<DBIterator> {
         RocksDB::iterator(self, category)
     }
+
+    fn close(&mut self) {
+        RocksDB::close(self)
+    }
 }
 
 fn get_column(db: &DB, category: DataCategory) -> Result<ColumnFamily, DatabaseError> {
