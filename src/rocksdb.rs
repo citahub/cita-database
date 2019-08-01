@@ -4,7 +4,7 @@ use std::sync::Arc;
 
 use crate::columns::map_columns;
 use crate::config::{Config, BACKGROUND_COMPACTIONS, BACKGROUND_FLUSHES, WRITE_BUFFER_SIZE};
-use crate::database::{DataCategory, Database};
+use crate::database::{DataCategory, Database, Result};
 use crate::error::DatabaseError;
 use rocksdb::{
     BlockBasedOptions, ColumnFamily, DBCompactionStyle, DBIterator, IteratorMode, Options,
@@ -33,12 +33,12 @@ unsafe impl Send for RocksDB {}
 
 impl RocksDB {
     /// Open a rocksDB with default config.
-    pub fn open_default(path: &str) -> Result<Self, DatabaseError> {
+    pub fn open_default(path: &str) -> Result<Self> {
         Self::open(path, &Config::default())
     }
 
     /// Open rocksDB with config.
-    pub fn open(path: &str, config: &Config) -> Result<Self, DatabaseError> {
+    pub fn open(path: &str, config: &Config) -> Result<Self> {
         let mut opts = Options::default();
         opts.set_write_buffer_size(WRITE_BUFFER_SIZE);
         opts.set_max_background_flushes(BACKGROUND_FLUSHES);
@@ -93,7 +93,7 @@ impl RocksDB {
     }
 
     /// Restore the database from a copy at given path.
-    pub fn restore(&mut self, new_db: &str) -> Result<(), DatabaseError> {
+    pub fn restore(&mut self, new_db: &str) -> Result<()> {
         // Close it first
         // https://github.com/facebook/rocksdb/wiki/Basic-Operations#closing-a-database
         self.close();
@@ -170,11 +170,7 @@ impl RocksDB {
 }
 
 impl Database for RocksDB {
-    fn get(
-        &self,
-        category: Option<DataCategory>,
-        key: &[u8],
-    ) -> Result<Option<Vec<u8>>, DatabaseError> {
+    fn get(&self, category: Option<DataCategory>, key: &[u8]) -> Result<Option<Vec<u8>>> {
         match *self.db_info {
             Some(DBInfo { ref db }) => {
                 // let db = Arc::clone(&self.db);
@@ -195,7 +191,7 @@ impl Database for RocksDB {
         &self,
         category: Option<DataCategory>,
         keys: &[Vec<u8>],
-    ) -> Result<Vec<Option<Vec<u8>>>, DatabaseError> {
+    ) -> Result<Vec<Option<Vec<u8>>>> {
         let mut values = Vec::with_capacity(keys.len());
         if let Some(DBInfo { ref db }) = *self.db_info {
             let keys = keys.to_vec();
@@ -213,12 +209,7 @@ impl Database for RocksDB {
         Ok(values)
     }
 
-    fn insert(
-        &self,
-        category: Option<DataCategory>,
-        key: Vec<u8>,
-        value: Vec<u8>,
-    ) -> Result<(), DatabaseError> {
+    fn insert(&self, category: Option<DataCategory>, key: Vec<u8>, value: Vec<u8>) -> Result<()> {
         if let Some(DBInfo { ref db }) = *self.db_info {
             match category {
                 Some(category) => {
@@ -237,7 +228,7 @@ impl Database for RocksDB {
         category: Option<DataCategory>,
         keys: Vec<Vec<u8>>,
         values: Vec<Vec<u8>>,
-    ) -> Result<(), DatabaseError> {
+    ) -> Result<()> {
         if keys.len() != values.len() {
             return Err(DatabaseError::InvalidData);
         }
@@ -260,7 +251,7 @@ impl Database for RocksDB {
         Ok(())
     }
 
-    fn contains(&self, category: Option<DataCategory>, key: &[u8]) -> Result<bool, DatabaseError> {
+    fn contains(&self, category: Option<DataCategory>, key: &[u8]) -> Result<bool> {
         match *self.db_info {
             Some(DBInfo { ref db }) => {
                 let key = key.to_vec();
@@ -276,7 +267,7 @@ impl Database for RocksDB {
         }
     }
 
-    fn remove(&self, category: Option<DataCategory>, key: &[u8]) -> Result<(), DatabaseError> {
+    fn remove(&self, category: Option<DataCategory>, key: &[u8]) -> Result<()> {
         if let Some(DBInfo { ref db }) = *self.db_info {
             let key = key.to_vec();
             match category {
@@ -291,11 +282,7 @@ impl Database for RocksDB {
         Ok(())
     }
 
-    fn remove_batch(
-        &self,
-        category: Option<DataCategory>,
-        keys: &[Vec<u8>],
-    ) -> Result<(), DatabaseError> {
+    fn remove_batch(&self, category: Option<DataCategory>, keys: &[Vec<u8>]) -> Result<()> {
         if let Some(DBInfo { ref db }) = *self.db_info {
             let keys = keys.to_vec();
             let mut batch = WriteBatch::default();
@@ -315,7 +302,7 @@ impl Database for RocksDB {
         Ok(())
     }
 
-    fn restore(&mut self, new_db: &str) -> Result<(), DatabaseError> {
+    fn restore(&mut self, new_db: &str) -> Result<()> {
         RocksDB::restore(self, new_db)
     }
 
@@ -328,7 +315,7 @@ impl Database for RocksDB {
     }
 }
 
-fn get_column(db: &DB, category: DataCategory) -> Result<ColumnFamily, DatabaseError> {
+fn get_column(db: &DB, category: DataCategory) -> Result<ColumnFamily> {
     db.cf_handle(map_columns(category))
         .ok_or(DatabaseError::NotFound)
 }
