@@ -14,4 +14,6 @@ extern crate cita_logger as logger;
 pub use self::columns::NUM_COLUMNS;
 pub use self::config::Config;
 pub use self::database::{DataCategory, Database};
+pub use self::error::DatabaseError;
+pub use self::memorydb::MemoryDB;
 pub use self::rocksdb::RocksDB;
