@@ -10,4 +10,4 @@ Cargo.lock
 **/*.rs.bk
 
 # dev test data
-rocksdb
+rocksdb_test
