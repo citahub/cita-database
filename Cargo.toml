@@ -9,7 +9,7 @@ repository = "https://github.com/cryptape/cita-database"
 license = "Apache-2.0"
 
 [dependencies]
-cita-logger = "0.1.0"
+cita-logger = "0.1.1"
 rocksdb = "0.12.2"
 
 [dev-dependencies]
