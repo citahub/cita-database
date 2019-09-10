@@ -1,6 +1,7 @@
 # cita-database
 
 [![Travis CI]](https://travis-ci.com/cryptape/cita-database)
+[![crates.io]](https://crates.io/crates/cita-database)
 
 The database used by [CITA].
 
@@ -11,3 +12,4 @@ cita-database is released under the terms of the Apache license. See [LICENSE] f
 [CITA]: https://github.com/cryptape/cita
 [LICENSE]: LICENSE
 [Travis CI]: https://travis-ci.com/cryptape/cita-database.svg?branch=develop
+[crates.io]: https://img.shields.io/crates/v/cita-database.svg
