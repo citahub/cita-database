@@ -9,7 +9,7 @@ The database used by [CITA].
 
 cita-database is released under the terms of the Apache license. See [LICENSE] for more information.
 
-[CITA]: https://github.com/cryptape/cita
+[CITA]: https://github.com/citahub/cita
 [LICENSE]: LICENSE
 [Travis CI]: https://travis-ci.com/cryptape/cita-database.svg?branch=develop
 [crates.io]: https://img.shields.io/crates/v/cita-database.svg

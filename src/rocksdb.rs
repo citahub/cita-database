@@ -3,7 +3,7 @@ use std::path::Path;
 use std::sync::Arc;
 
 use crate::columns::map_columns;
-use crate::config::{Config, BACKGROUND_COMPACTIONS, BACKGROUND_FLUSHES, WRITE_BUFFER_SIZE};
+use crate::config::{Config, BACKGROUND_FLUSHES, WRITE_BUFFER_SIZE};
 use crate::database::{DataCategory, Database, Result};
 use crate::error::DatabaseError;
 use rocksdb::{
@@ -25,7 +25,6 @@ pub struct RocksDB {
     db_info: Arc<Option<DBInfo>>,
     pub config: Config,
     pub write_opts: WriteOptions,
-    pub read_opts: ReadOptions,
     path: String,
 }
 
@@ -43,8 +42,8 @@ impl RocksDB {
     pub fn open(path: &str, config: &Config) -> Result<Self> {
         let mut opts = Options::default();
         opts.set_write_buffer_size(WRITE_BUFFER_SIZE);
-        opts.set_max_background_flushes(BACKGROUND_FLUSHES);
-        opts.set_max_background_compactions(BACKGROUND_COMPACTIONS);
+        opts.set_max_background_jobs(BACKGROUND_FLUSHES);
+
         opts.create_if_missing(true);
         // If true, any column families that didn't exist when opening the database will be created.
         opts.create_missing_column_families(true);
@@ -60,7 +59,7 @@ impl RocksDB {
             opts.set_max_bytes_for_level_multiplier(level_multiplier);
         }
         if let Some(compactions) = config.compaction.max_background_compactions {
-            opts.set_max_background_compactions(compactions);
+            opts.set_max_background_jobs(compactions);
         }
 
         let mut write_opts = WriteOptions::default();
@@ -83,7 +82,6 @@ impl RocksDB {
         Ok(RocksDB {
             db_info: Arc::new(Some(DBInfo { db })),
             write_opts,
-            read_opts: ReadOptions::default(),
             config: config.clone(),
             path: path.to_owned(),
         })
@@ -134,18 +132,17 @@ impl RocksDB {
     pub fn iterator(&self, category: Option<DataCategory>) -> Option<DBIterator> {
         match *self.db_info {
             Some(DBInfo { ref db }) => {
-                let iter = category.map_or_else(
-                    || db.iterator_opt(IteratorMode::Start, &self.read_opts),
-                    |col| {
+                let iter = {
+                    if let Some(col) = category {
                         db.iterator_cf_opt(
                             get_column(&db, col).unwrap(),
-                            &self.read_opts,
+                            ReadOptions::default(),
                             IteratorMode::Start,
                         )
-                        .expect("iterator params are valid;")
-                    },
-                );
-
+                    } else {
+                        db.iterator_opt(IteratorMode::Start, ReadOptions::default())
+                    }
+                };
                 Some(iter)
             }
             None => None,
@@ -160,7 +157,7 @@ impl RocksDB {
         let columns: Vec<&str> = columns.iter().map(|n| n as &str).collect();
 
         for col in columns.iter() {
-            if let Some(DBInfo { ref db }) = *self.db_info {
+            if let Some(DBInfo { ref mut db }) = *self.db_info {
                 db.drop_cf(col).unwrap();
             }
         }
@@ -245,9 +242,9 @@ impl Database for RocksDB {
                 match category.clone() {
                     Some(category) => {
                         let col = get_column(&db, category)?;
-                        batch.put_cf(col, &keys[i], &values[i])?;
+                        batch.put_cf(col, &keys[i], &values[i]);
                     }
-                    None => batch.put(&keys[i], &values[i])?,
+                    None => batch.put(&keys[i], &values[i]),
                 }
             }
             db.write(batch)?;
@@ -296,7 +293,7 @@ impl Database for RocksDB {
                 match category.clone() {
                     Some(category) => {
                         let col = get_column(&db, category)?;
-                        batch.delete_cf(col, key)?;
+                        batch.delete_cf(col, key);
                     }
                     None => db.delete(key)?,
                 }
@@ -321,7 +318,7 @@ impl Database for RocksDB {
 }
 
 // Get the column from the data category.
-fn get_column(db: &DB, category: DataCategory) -> Result<ColumnFamily> {
+fn get_column(db: &DB, category: DataCategory) -> Result<&ColumnFamily> {
     db.cf_handle(map_columns(category))
         .ok_or(DatabaseError::NotFound)
 }

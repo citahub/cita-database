@@ -1,15 +1,15 @@
 [package]
 name = "cita-database"
 version = "0.1.0"
-authors = ["Cryptape Technologies <contact@cryptape.com>"]
+authors = ["Rivtower Technologies <contact@rivtower.com>"]
 edition = "2018"
 description = "Database for CITA."
-homepage = "https://github.com/cryptape/cita-database"
-repository = "https://github.com/cryptape/cita-database"
+homepage = "https://github.com/citahub/cita-database"
+repository = "https://github.com/citahub/cita-database"
 license = "Apache-2.0"
 
 [dependencies]
 cita-logger = "0.1.1"
-rocksdb = "0.12.2"
+rocksdb = "0.15"
 
 [dev-dependencies]
