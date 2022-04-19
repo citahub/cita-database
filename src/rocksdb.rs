@@ -99,7 +99,7 @@ impl RocksDB {
         self.close();
 
         // Backup if the backup_path does not exist.
-        let backup = !path_exists(&BACKUP_PATH);
+        let backup = !path_exists(BACKUP_PATH);
 
         // Backup the old db
         if backup {
@@ -135,7 +135,7 @@ impl RocksDB {
                 let iter = {
                     if let Some(col) = category {
                         db.iterator_cf_opt(
-                            get_column(&db, col).unwrap(),
+                            get_column(db, col).unwrap(),
                             ReadOptions::default(),
                             IteratorMode::Start,
                         )
@@ -180,7 +180,7 @@ impl Database for RocksDB {
 
                 let mut value = db.get(&key)?;
                 if let Some(category) = category {
-                    let col = get_column(&db, category)?;
+                    let col = get_column(db, category)?;
                     value = db.get_cf(col, &key)?;
                 }
                 Ok(value.map(|v| v.to_vec()))
@@ -201,7 +201,7 @@ impl Database for RocksDB {
             for key in keys {
                 let mut value = db.get(&key)?;
                 if let Some(category) = category.clone() {
-                    let col = get_column(&db, category)?;
+                    let col = get_column(db, category)?;
                     value = db.get_cf(col, &key)?;
                 }
                 values.push(value.map(|v| v.to_vec()));
@@ -215,7 +215,7 @@ impl Database for RocksDB {
         if let Some(DBInfo { ref db }) = *self.db_info {
             match category {
                 Some(category) => {
-                    let col = get_column(&db, category)?;
+                    let col = get_column(db, category)?;
                     db.put_cf(col, key, value)?;
                 }
                 None => db.put(key, value)?,
@@ -241,7 +241,7 @@ impl Database for RocksDB {
             for i in 0..keys.len() {
                 match category.clone() {
                     Some(category) => {
-                        let col = get_column(&db, category)?;
+                        let col = get_column(db, category)?;
                         batch.put_cf(col, &keys[i], &values[i]);
                     }
                     None => batch.put(&keys[i], &values[i]),
@@ -259,7 +259,7 @@ impl Database for RocksDB {
                 let key = key.to_vec();
                 let mut value = db.get(&key)?;
                 if let Some(category) = category {
-                    let col = get_column(&db, category)?;
+                    let col = get_column(db, category)?;
                     value = db.get_cf(col, &key)?;
                 }
 
@@ -274,7 +274,7 @@ impl Database for RocksDB {
             let key = key.to_vec();
             match category {
                 Some(category) => {
-                    let col = get_column(&db, category)?;
+                    let col = get_column(db, category)?;
                     db.delete_cf(col, key)?;
                 }
                 None => db.delete(key)?,
@@ -292,7 +292,7 @@ impl Database for RocksDB {
             for key in keys {
                 match category.clone() {
                     Some(category) => {
-                        let col = get_column(&db, category)?;
+                        let col = get_column(db, category)?;
                         batch.delete_cf(col, key);
                     }
                     None => db.delete(key)?,

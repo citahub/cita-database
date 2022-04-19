@@ -22,9 +22,10 @@ pub struct Config {
 impl Config {
     /// Create new `Config` with default parameters and specified set of category.
     pub fn with_category_num(category_num: Option<u32>) -> Self {
-        let mut config = Self::default();
-        config.category_num = category_num;
-        config
+        Self {
+            category_num,
+            ..Default::default()
+        }
     }
 }
 
