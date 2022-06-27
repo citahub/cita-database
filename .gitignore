@@ -11,3 +11,5 @@ Cargo.lock
 
 # dev test data
 rocksdb_test
+
+.idea
