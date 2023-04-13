@@ -150,15 +150,14 @@ impl RocksDB {
     }
 
     #[cfg(test)]
-    fn clean_cf(&self) {
+    fn clean_cf(&mut self) {
         let columns: Vec<_> = (0..self.config.category_num.unwrap_or(0))
             .map(|c| format!("col{}", c))
             .collect();
         let columns: Vec<&str> = columns.iter().map(|n| n as &str).collect();
-
-        for col in columns.iter() {
-            if let Some(DBInfo { ref mut db }) = *self.db_info {
-                db.drop_cf(col).unwrap();
+        if let Some(DBInfo { db }) = Arc::get_mut(&mut self.db_info).unwrap() {
+            for col in columns.iter() {
+                    db.drop_cf(col).unwrap();
             }
         }
     }
@@ -340,7 +339,7 @@ mod tests {
     #[test]
     fn test_insert_get_contains_remove_with_category() {
         let cfg = Config::with_category_num(Some(1));
-        let db = RocksDB::open(
+        let mut db = RocksDB::open(
             "rocksdb_test/get_insert_contains_remove_with_category",
             &cfg,
         )
@@ -362,7 +361,7 @@ mod tests {
     #[test]
     fn test_batch_op_with_category() {
         let cfg = Config::with_category_num(Some(1));
-        let db = RocksDB::open("rocksdb_test/batch_op_with_category", &cfg).unwrap();
+        let mut db = RocksDB::open("rocksdb_test/batch_op_with_category", &cfg).unwrap();
 
         batch_op(&db, Some(DataCategory::State));
 
@@ -381,7 +380,7 @@ mod tests {
     #[test]
     fn test_insert_batch_error_with_category() {
         let cfg = Config::with_category_num(Some(1));
-        let db = RocksDB::open("rocksdb_test/insert_batch_error_with_category", &cfg).unwrap();
+        let mut db = RocksDB::open("rocksdb_test/insert_batch_error_with_category", &cfg).unwrap();
 
         let data = b"test".to_vec();
 
@@ -410,7 +409,7 @@ mod tests {
     #[test]
     fn test_iterator_with_category() {
         let cfg = Config::with_category_num(Some(1));
-        let db = RocksDB::open("rocksdb_test/iterator_with_category", &cfg).unwrap();
+        let mut db = RocksDB::open("rocksdb_test/iterator_with_category", &cfg).unwrap();
 
         let data1 = b"test1".to_vec();
         let data2 = b"test2".to_vec();
@@ -429,10 +428,10 @@ mod tests {
             .collect();
 
         assert_eq!(contents.len(), 2);
-        assert_eq!(&*contents[0].0, &*data1);
-        assert_eq!(&*contents[0].1, &*data1);
-        assert_eq!(&*contents[1].0, &*data2);
-        assert_eq!(&*contents[1].1, &*data2);
+        assert_eq!(&*contents[0].clone().unwrap().0, &*data1);
+        assert_eq!(&*contents[0].clone().unwrap().1, &*data1);
+        assert_eq!(&*contents[1].clone().unwrap().0, &*data2);
+        assert_eq!(&*contents[1].clone().unwrap().1, &*data2);
 
         db.clean_cf();
         db.clean_db();
@@ -458,10 +457,10 @@ mod tests {
             .flat_map(|inner| inner)
             .collect();
         assert_eq!(contents.len(), 2);
-        assert_eq!(&*contents[0].0, &*data1);
-        assert_eq!(&*contents[0].1, &*data1);
-        assert_eq!(&*contents[1].0, &*data2);
-        assert_eq!(&*contents[1].1, &*data2);
+        assert_eq!(&*contents[0].clone().unwrap().0, &*data1);
+        assert_eq!(&*contents[0].clone().unwrap().1, &*data1);
+        assert_eq!(&*contents[1].clone().unwrap().0, &*data2);
+        assert_eq!(&*contents[1].clone().unwrap().1, &*data2);
         db.clean_db();
     }
 
