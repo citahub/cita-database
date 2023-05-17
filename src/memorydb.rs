@@ -128,7 +128,7 @@ impl Database for MemoryDB {
         unimplemented!();
     }
 
-    fn flush(&mut self) -> Result<()> {
+    fn flush(&self) -> Result<()> {
         unimplemented!();
     }
 }

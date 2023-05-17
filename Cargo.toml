@@ -1,6 +1,6 @@
 [package]
 name = "cita-database"
-version = "0.5.0"
+version = "0.5.1"
 authors = ["Rivtower Technologies <contact@rivtower.com>"]
 edition = "2021"
 description = "Database for CITA."

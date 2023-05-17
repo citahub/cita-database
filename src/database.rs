@@ -54,5 +54,5 @@ pub trait Database: Send + Sync {
     fn iterator(&self, category: Option<DataCategory>) -> Option<DBIterator>;
 
     fn close(&mut self);
-    fn flush(&mut self) -> Result<()>;
+    fn flush(&self) -> Result<()>;
 }

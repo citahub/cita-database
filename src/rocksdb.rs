@@ -315,7 +315,7 @@ impl Database for RocksDB {
         RocksDB::close(self)
     }
 
-    fn flush(&mut self) -> Result<()> {
+    fn flush(&self) -> Result<()> {
         if let Some(DBInfo { ref db }) = *self.db_info {
             db.flush()?;
         }
