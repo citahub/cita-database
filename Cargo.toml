@@ -1,6 +1,6 @@
 [package]
 name = "cita-database"
-version = "0.4.0"
+version = "0.5.0"
 authors = ["Rivtower Technologies <contact@rivtower.com>"]
 edition = "2021"
 description = "Database for CITA."
@@ -10,6 +10,6 @@ license = "Apache-2.0"
 
 [dependencies]
 cita-logger = "0.1.1"
-rocksdb = "0.20.0"
+rocksdb = "0.21.0"
 
 [dev-dependencies]
