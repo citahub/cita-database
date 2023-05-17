@@ -314,6 +314,14 @@ impl Database for RocksDB {
     fn close(&mut self) {
         RocksDB::close(self)
     }
+
+    fn flush(&mut self) -> Result<()> {
+        if let Some(DBInfo { ref db }) = *self.db_info {
+            db.flush()?;
+        }
+
+        Ok(())
+    }
 }
 
 // Get the column from the data category.

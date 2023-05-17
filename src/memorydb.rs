@@ -127,6 +127,10 @@ impl Database for MemoryDB {
     fn close(&mut self) {
         unimplemented!();
     }
+
+    fn flush(&mut self) -> Result<()> {
+        unimplemented!();
+    }
 }
 
 fn gen_key(category: &Option<DataCategory>, key: Vec<u8>) -> Vec<u8> {
