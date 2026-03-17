@@ -120,7 +120,7 @@ impl Database for MemoryDB {
         unimplemented!()
     }
 
-    fn iterator(&self, _category: Option<DataCategory>) -> Option<DBIterator> {
+    fn iterator(&self, _category: Option<DataCategory>) -> Option<DBIterator<'_>> {
         unimplemented!()
     }
 

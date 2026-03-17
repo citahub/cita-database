@@ -129,7 +129,7 @@ impl RocksDB {
         Ok(())
     }
 
-    pub fn iterator(&self, category: Option<DataCategory>) -> Option<DBIterator> {
+    pub fn iterator(&self, category: Option<DataCategory>) -> Option<DBIterator<'_>> {
         match *self.db_info {
             Some(DBInfo { ref db }) => {
                 let iter = {
@@ -307,7 +307,7 @@ impl Database for RocksDB {
         RocksDB::restore(self, new_db)
     }
 
-    fn iterator(&self, category: Option<DataCategory>) -> Option<DBIterator> {
+    fn iterator(&self, category: Option<DataCategory>) -> Option<DBIterator<'_>> {
         RocksDB::iterator(self, category)
     }
 
